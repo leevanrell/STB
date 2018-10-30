@@ -6,12 +6,14 @@ import feedparser
 import configparser
 import sqlite3
 
+Ticker_file = './data/ticker.txt'
+DB_file = './data/rss.db'
 
 Delay = 60 * 60
-Companies = ['AMD', 'MSFT', 'CRM', 'INTC', 'SQ']
-db_file = './data/rss.db'
+Companies = open(Ticker_file).readlines()
+Companies = [line.strip() for line in Companies]
 #Columns: time, company, title
-conn = sqlite3.connect(db_file)
+conn = sqlite3.connect(DB_file)
 c = conn.cursor()
 c.execute("""create table if not exists Yahoo (t text, company text, title text  PRIMARY KEY)""")
 conn.commit()
