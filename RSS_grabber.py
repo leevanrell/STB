@@ -18,7 +18,7 @@ conn.commit()
 
 try:
 	while True:
-		if datetime.datime.today().weekday() < 5:
+		if datetime.datetime.today().weekday() < 5:
 			for Company in Companies:
 				feed = feedparser.parse('http://finance.yahoo.com/rss/industry?s=' + Company)
 				feed_entries = feed.entries
