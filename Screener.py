@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import smtplib
 import datetime
 from twilio.rest import TwilioRestClient
