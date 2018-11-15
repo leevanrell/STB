@@ -1,22 +1,15 @@
 #!/usr/bin/python3
-from subprocess import check_output
 from time import gmtime, strftime, sleep
 from concurrent.futures import ProcessPoolExecutor
 import concurrent.futures
 import time
 import datetime
-import feedparser
-import configparser
-import sqlite3
-import sys
-import re
+import os
 import logging
 import asyncio
+import sqlite3
 
-from lib.SQL_manager import SQL
-from lib.RSS_Yahoo import RSS_Yahoo
-from lib.RSS_NASDAQ import RSS_NASDAQ
-
+from lib.Generic_RSS import Generic_RSS
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -36,30 +29,30 @@ logger.addHandler(fh)
 Ticker_file = './data/ticker.txt'
 DB_file = './data/rss.db'
 
-RSS_TIMEOUT = 1
-SQL_TIMEOUT = 1
-Processes_Count = 3
-Fin_TIMEOUT = 3
+RSS_TIMEOUT = 60 * 60
+SCREEN_REFRESH = 5
+Processes_Count = 4
+Fin_TIMEOUT = 5
+VERSION = '0.1'
 
 
 def main():
 	Companies = [line.strip() for line in open(Ticker_file).readlines()]
 	logger.debug('Looking up RSS on %s' % str(Companies))
 
-	q = asyncio.Queue()
-	conn = initDB()
+	global Yahoo, NASDAQ, Screen_Running
 
-	Yahoo = RSS_Yahoo(logger, q, RSS_TIMEOUT, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Companies)
-	NASDAQ = RSS_NASDAQ(logger, q, RSS_TIMEOUT, 'NASDAQ', 'http://articlefeeds.nasdaq.com/nasdaq/symbols?symbol=', Companies)
-	Sql = SQL(logger, q, SQL_TIMEOUT, conn)
-
-	logger.info("Starting %s Threads" % Processes_Count)
-	executor = ProcessPoolExecutor(Processes_Count)
+	executor = ProcessPoolExecutor()
 	loop = asyncio.get_event_loop()
-	future_Yahoo = loop.run_in_executor(None, Yahoo.run, loop)
-	future_NASDAQ = loop.run_in_executor(None, NASDAQ.run, loop)
-	future_Sql = loop.run_in_executor(None, Sql.run, loop)
-	#loop.run_until_complete(Sql.run(loop))
+
+	Yahoo = Generic_RSS(logger, RSS_TIMEOUT, DB_file, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Companies)
+	NASDAQ = Generic_RSS(logger, RSS_TIMEOUT, DB_file, 'NASDAQ', 'http://articlefeeds.nasdaq.com/nasdaq/symbols?symbol=', Companies)
+	Screen_Running = True
+
+	Y = loop.run_in_executor(None, Yahoo.run, loop)
+	N = loop.run_in_executor(None, NASDAQ.run, loop)
+	S = loop.run_in_executor(None, screen, loop)
+
 	try:
 		loop.run_forever()
 	except KeyboardInterrupt:
@@ -67,23 +60,40 @@ def main():
 		logger.info('Detected KeyboardInterrupt')
 		Yahoo.running = False
 		NASDAQ.running = False
-		Sql.running = False
+		Screen_Running = False
 	sleep(Fin_TIMEOUT)
-	future_Yahoo.cancel()
-	future_NASDAQ.cancel()
-	future_Sql.cancel()
-	conn.close()
 	loop.close()
 	logger.info('Fin.')
 
 
-def initDB():
+def screen(loop):
+	start_time = datetime.datetime.now()
+	while Screen_Running:
+		print("Started STB v%s at %s " % (VERSION, time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.localtime())))
+		print("Duration: {}".format(datetime.datetime.now() - start_time))
+		print("Current Entry Count: %s" % getRowCount())
+		sleep(SCREEN_REFRESH)
+		os.system( 'clear' )
+	print('Fin.')
+
+
+def getRowCount():
 	conn = sqlite3.connect(DB_file)
+	c = conn.cursor()
+	c.execute("""SELECT * from RSS""")
+	results = c.fetchall()
+	c.close()
+	conn.close()
+	return len(results)
+
+
+def initDB(self):
+	conn = sqlite3.connect(self.DB_file)
 	c = conn.cursor()
 	c.execute("""create table if not exists RSS (t text, website text, company text, title text  PRIMARY KEY, summary text)""")	
 	conn.commit()
 	c.close()
-	return conn
+	conn.close()
 
 
 if __name__ == "__main__":
