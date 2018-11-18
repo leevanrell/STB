@@ -2,25 +2,26 @@
 from concurrent.futures import ProcessPoolExecutor
 import concurrent.futures
 import logging
+import datetime
 import asyncio
 
-from lib.GenericRSSData import RSS
-from lib.StockData import Stock
-from lib.ScreenData import Screen
-from lib.WikiData import Wiki
+from lib.GenericRSS_Data import RSS
+from lib.Stock_Data import Stock
+from lib.Wiki_Data import Wiki
+from lib.Screen_Data import Screen
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 fmt = logging.Formatter('%(asctime)s - %(threadName)-11s -  %(levelname)s - %(message)s')
 
 
-fh = logging.FileHandler('./data/data.py.log')
+fh = logging.FileHandler('./data/logs/%s.log' % (datetime.datetime.now().strftime('%Y-%m-%d')))
 fh.setLevel(logging.DEBUG)
 fh.setFormatter(fmt)
 logger.addHandler(fh)
 
 #ch = logging.StreamHandler()
-#ch.setLevel(logging.INFO)
+#ch.setLevel(logging.DEBUG)
 #ch.setFormatter(fmt)
 #logger.addHandler(ch)
 
@@ -46,13 +47,13 @@ def main():
 	executor = ProcessPoolExecutor()
 
 	Yahoo_Data = RSS(logger, RSS_DB_file, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Ticker_Companies)
-	NASDAQ_Data = RSS(logger, RSS_DB_file, 'NASDAQ', 'http://articlefeeds.nasdaq.com/nasdaq/symbols?symbol=', Ticker_Companies)
+	#NASDAQ_Data = RSS(logger, RSS_DB_file, 'NASDAQ', 'http://articlefeeds.nasdaq.com/nasdaq/symbols?symbol=', Ticker_Companies)
 	Stock_Data = Stock(logger, Stock_DB_file, Alpha_url, Alpha_api_key, Ticker_Companies )
 	Wiki_Data = Wiki(logger, Wiki_DB_file, Wikipedia_Companies)
-	Screen_Data = Screen(VERSION, Yahoo_Data, NASDAQ_Data, Stock_Data, Wiki_Data)
+	Screen_Data = Screen(VERSION, Yahoo_Data, Stock_Data, Wiki_Data)
 
 	future_Yahoo = loop.run_in_executor(None, Yahoo_Data.run, loop)
-	future_NASDAQ = loop.run_in_executor(None, NASDAQ_Data.run, loop)
+	#future_NASDAQ = loop.run_in_executor(None, NASDAQ_Data.run, loop)
 	future_Stock = loop.run_in_executor(None, Stock_Data.run, loop)
 	future_Wiki = loop.run_in_executor(None, Wiki_Data.run, loop)
 	future_Screen = loop.run_in_executor(None, Screen_Data.run, loop)
