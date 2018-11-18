@@ -1,4 +1,9 @@
 #!/usr/bin/python3
+"""
+	Data collection manager for STB. Runs several async threads to query and collect data from various api
+	Each api typically get its own database
+	Currently collecting RSS data from yahoo.finance, Stock prices and indicatos from alphavantage, and wikipedia view counts.
+"""
 from concurrent.futures import ProcessPoolExecutor
 import concurrent.futures
 import logging
@@ -32,7 +37,6 @@ logger.addHandler(fh2)
 # logger.addHandler(ch)
 
 Alpha_api_key = '2RPX5G5M7XOXMDJU'
-Alpha_url = 'http://www.alphavantage.co/query'
 
 Ticker_file = './data/ticker.txt'
 RSS_DB_file = './data/data.db'
@@ -53,7 +57,7 @@ def main():
 	executor = ProcessPoolExecutor()
 
 	Yahoo_Data = RSS(logger, RSS_DB_file, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Ticker_Companies)
-	Stock_Data = Stock(logger, Stock_DB_file, Alpha_url, Alpha_api_key, Ticker_Companies )
+	Stock_Data = Stock(logger, Stock_DB_file, Alpha_api_key, Ticker_Companies )
 	Wiki_Data = Wiki(logger, Wiki_DB_file, Wikipedia_Companies)
 	Screen_Data = Screen(VERSION, Yahoo_Data, Stock_Data, Wiki_Data)
 
