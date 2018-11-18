@@ -32,7 +32,7 @@ Alpha_api_key = '2RPX5G5M7XOXMDJU'
 Alpha_url = 'http://www.alphavantage.co/query'
 
 Ticker_file = './data/ticker.txt'
-RSS_DB_file = './data/rss.db'
+RSS_DB_file = './data/data.db'
 Stock_DB_file = './data/stock.db'
 
 Processes_Count = 4
