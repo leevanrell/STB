@@ -4,16 +4,18 @@
 	Each api typically get its own database
 	Currently collecting RSS data from yahoo.finance, Stock prices and indicatos from alphavantage, and wikipedia view counts.
 """
+
 from concurrent.futures import ProcessPoolExecutor
 import concurrent.futures
 import logging
 import datetime
 import asyncio
+import argparse
 
-from lib.GenericRSS_Data import RSS
-from lib.Stock_Data import Stock
-from lib.Wiki_Data import Wiki
-from lib.Screen_Data import Screen
+from lib.data.GenericRSS_Data import RSS
+from lib.data.Stock_Data import Stock
+from lib.data.Wiki_Data import Wiki
+from lib.data.Screen_Data import Screen
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -39,7 +41,7 @@ logger.addHandler(fh2)
 Alpha_api_key = '2RPX5G5M7XOXMDJU'
 
 Ticker_file = './data/ticker.txt'
-RSS_DB_file = './data/data.db'
+RSS_DB_file = './data/rss.db'
 Stock_DB_file = './data/stock.db'
 Wiki_DB_file = './data/wiki.db'
 
@@ -48,37 +50,48 @@ Fin_TIMEOUT = 5
 VERSION = '0.2'
 
 
-def main():
-	Ticker_Companies = [line.strip().split(' : ')[0] for line in open(Ticker_file).readlines()]
-	Wikipedia_Companies = [line.strip().split(' : ')[1] for line in open(Ticker_file).readlines()]
-	logger.debug('Looking up RSS on %s' % str(Ticker_Companies ))
-
+def main(verbose):
 	loop = asyncio.get_event_loop()
-	executor = ProcessPoolExecutor()
+	#executor = ProcessPoolExecutor()
 
-	Yahoo_Data = RSS(logger, RSS_DB_file, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Ticker_Companies)
-	Stock_Data = Stock(logger, Stock_DB_file, Alpha_api_key, Ticker_Companies )
-	Wiki_Data = Wiki(logger, Wiki_DB_file, Wikipedia_Companies)
+	Yahoo_Data = RSS(logger, RSS_DB_file, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Ticker_file)
+	Stock_Data = Stock(logger, Stock_DB_file, Alpha_api_key, Ticker_file)
+	Wiki_Data = Wiki(logger, Wiki_DB_file, Ticker_file)
 	Screen_Data = Screen(VERSION, Yahoo_Data, Stock_Data, Wiki_Data)
 
 	future_Yahoo = loop.run_in_executor(None, Yahoo_Data.run, loop)
 	future_Stock = loop.run_in_executor(None, Stock_Data.run, loop)
 	future_Wiki = loop.run_in_executor(None, Wiki_Data.run, loop)
-	future_Screen = loop.run_in_executor(None, Screen_Data.run, loop)
+	if verbose:
+		future_Screen = loop.run_in_executor(None, Screen_Data.run, loop)
+		threads = [Yahoo_Data, Stock_Data, Wiki_Data, Screen_Data]
+	else:
+		threads = [Yahoo_Data, Stock_Data, Wiki_Data]
 
 	try:
 		loop.run_forever()
 	except KeyboardInterrupt:
-		print('\r')
-		logger.info('Detected KeyboardInterrupt')
-		Yahoo_Data.running = False
-		Stock_Data.running = False
-		Screen_Data.running = False
-	while not Screen_Data.fin:
-		pass
+		stopThreads(threads)
+	waitforThreads(threads)
 	loop.close()
+
+
+def stopThreads(threads):
+	print('\r')
+	logger.info('Detected KeyboardInterrupt')
+	for thread in threads:
+		thread.running = False
+
+
+def waitforThreads(threads):
+	for thread in threads:
+		while not thread.fin:
+			pass
 	logger.info('Fin.')
 
 
 if __name__ == "__main__":
-	main()
+	parser = argparse.ArgumentParser(description='Data Collector for STB')
+	parser.add_argument('--verbose', dest='verbose', action='store_true')
+	parser.set_defaults(feature=False)
+	main(parser.parse_args().verbose)

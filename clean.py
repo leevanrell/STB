@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import os
 for parent, dirnames, filenames in os.walk('.'):
     for fn in filenames:
