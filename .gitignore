@@ -1,4 +1,4 @@
-*.db
-*.db-journal
-*.log
-*.pyc
+**.db
+**.db-journal
+**.log
+**.pyc
