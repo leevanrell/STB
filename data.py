@@ -5,8 +5,8 @@
 	Currently collecting RSS data from yahoo.finance, Stock prices and indicatos from alphavantage, and wikipedia view counts.
 """
 
-from concurrent.futures import ProcessPoolExecutor
-import concurrent.futures
+#from concurrent.futures import ProcessPoolExecutor
+#import concurrent.futures
 import logging
 import datetime
 import asyncio
@@ -51,41 +51,47 @@ VERSION = '0.2'
 
 
 def main(verbose):
+	logger.info('Starting STB v%s Data Collector' % VERSION)
 	loop = asyncio.get_event_loop()
 	#executor = ProcessPoolExecutor()
-
 	Yahoo_Data = RSS(logger, RSS_DB_file, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Ticker_file)
 	Stock_Data = Stock(logger, Stock_DB_file, Alpha_api_key, Ticker_file)
 	Wiki_Data = Wiki(logger, Wiki_DB_file, Ticker_file)
-	Screen_Data = Screen(VERSION, Yahoo_Data, Stock_Data, Wiki_Data)
 
 	future_Yahoo = loop.run_in_executor(None, Yahoo_Data.run, loop)
 	future_Stock = loop.run_in_executor(None, Stock_Data.run, loop)
 	future_Wiki = loop.run_in_executor(None, Wiki_Data.run, loop)
+	Threads = [Yahoo_Data, Stock_Data, Wiki_Data]
+
 	if verbose:
+		Screen_Data = Screen(logger, VERSION, Threads)
 		future_Screen = loop.run_in_executor(None, Screen_Data.run, loop)
-		threads = [Yahoo_Data, Stock_Data, Wiki_Data, Screen_Data]
 	else:
-		threads = [Yahoo_Data, Stock_Data, Wiki_Data]
+		Screen_Data = None
 
 	try:
 		loop.run_forever()
 	except KeyboardInterrupt:
-		stopThreads(threads)
-	waitforThreads(threads)
+		stopThreads(Threads, Screen_Data)
+	waitforThreads(Threads, Screen_Data)
 	loop.close()
 
 
-def stopThreads(threads):
+def stopThreads(threads, screen):
 	print('\r')
 	logger.info('Detected KeyboardInterrupt')
 	for thread in threads:
-		thread.running = False
+		thread.Running = False
+	if screen:
+		screen.Running = False
 
 
-def waitforThreads(threads):
+def waitforThreads(threads, screen):
 	for thread in threads:
-		while not thread.fin:
+		while not thread.Fin:
+			pass
+	if screen:
+		while not screen.Fin:
 			pass
 	logger.info('Fin.')
 
@@ -93,5 +99,5 @@ def waitforThreads(threads):
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Data Collector for STB')
 	parser.add_argument('--verbose', dest='verbose', action='store_true')
-	parser.set_defaults(feature=False)
+	parser.set_defaults(verbose=False)
 	main(parser.parse_args().verbose)

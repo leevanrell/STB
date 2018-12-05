@@ -101,18 +101,18 @@ def feedforward(df):
 def RNN(df):
 	#https://mapr.com/blog/deep-learning-tensorflow/
 	TS = np.array(df)
-	periods = 600
+	periods = 100
 	f_horizon = 1
 
 	x_data = TS[:(len(TS) - (len(TS) % periods))]
-	x_batches = x_data.reshape(-1, 600, 1)
+	x_batches = x_data.reshape(-1, periods, 1)
 
 	y_data = TS[1:(len(TS) - (len(TS) % periods)) + f_horizon]
-	y_batches = y_data.reshape(-1, 600, 1)
+	y_batches = y_data.reshape(-1, periods, 1)
 
 	test_x_setup = TS[-(periods + f_horizon):]
-	X_test = test_x_setup[:periods].reshape(-1, 600, 1)
-	Y_test = TS[-(periods):].reshape(-1, 600, 1)
+	X_test = test_x_setup[:periods].reshape(-1, periods, 1)
+	Y_test = TS[-(periods):].reshape(-1, periods, 1)
 
 	tf.reset_default_graph()
 
@@ -138,7 +138,7 @@ def RNN(df):
 
 	init = tf.global_variables_initializer()
 
-	epochs = 5000
+	epochs = 3000
 
 	with tf.Session() as sess:
 		init.run()
