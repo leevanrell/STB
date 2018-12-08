@@ -18,9 +18,8 @@ import sys
 import sqlite3
 import logging
 
+import data.Thread
 from data.Thread import Thread
-
-sys.path.append('../')
 
 
 class RSS(Thread):
@@ -44,7 +43,6 @@ class RSS(Thread):
 					documents = self.getArticles(feed.entries, ticker)
 					self.insertDB(documents)
 					self.logger.info('[%s] Collected data on %s' % (self.Name,ticker))
-				self.logger.debug('[%s] sleeping for %s' % (self.Name, self.TIMEOUT))
 				self.wait()
 			except Exception as e:
 				self.logger.error('[%s] error: %s' % (self.Name, e))
@@ -111,6 +109,7 @@ class RSS(Thread):
 		return False
 
 	def wait(self):
+		self.logger.debug('[%s] sleeping for %s' % (self.Name, self.TIMEOUT))
 		for s in range(0, self.TIMEOUT):
 			if not self.Running:
 				break

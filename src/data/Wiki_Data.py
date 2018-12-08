@@ -15,9 +15,8 @@ import logging
 import sqlite3
 import time
 
+import data.Thread
 from data.Thread import Thread
-
-sys.path.append('../')
 
 
 class Wiki(Thread):
@@ -45,7 +44,6 @@ class Wiki(Thread):
 					documents = self.getViews(viewer, ticker, article)
 					self.insertDB(documents)
 					self.logger.info('[%s] Collected Info on %s' % (self.Name, ticker))
-				self.logger.debug('[%s] sleeping for %s' % (self.Name, self.TIMEOUT))
 				self.wait()
 			except Exception as e:
 				self.logger.error('[%s] error: %s' % (self.Name, e))
@@ -79,6 +77,7 @@ class Wiki(Thread):
 		conn.close()
 
 	def wait(self):
+		self.logger.debug('[%s] sleeping for %s' % (self.Name, self.TIMEOUT))
 		for s in range(0, self.TIMEOUT):
 			if not self.Running:
 				break

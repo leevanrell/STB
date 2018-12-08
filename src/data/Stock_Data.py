@@ -16,9 +16,8 @@ import logging
 import sqlite3
 import json
 
+import data.Thread
 from data.Thread import Thread
-
-sys.path.append('../')
 
 
 class Stock(Thread):
@@ -48,7 +47,6 @@ class Stock(Thread):
 					documents = self.getDocuments(Ticker)
 					self.insertDB(documents)
 					self.logger.info('[%s] Collected Info on %s' % (self.Name, Ticker))
-				self.logger.debug('[%s] sleeping for %s' % (self.Name, self.TIMEOUT))
 				self.wait()
 			except Exception as e:
 				self.logger.error('[%s] error: %s' % (self.Name, e))
@@ -128,6 +126,7 @@ class Stock(Thread):
 		conn.close()
 
 	def wait(self):
+		self.logger.debug('[%s] sleeping for %s' % (self.Name, self.TIMEOUT))
 		for s in range(0, self.TIMEOUT):
 			if not self.Running:
 				break

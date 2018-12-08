@@ -11,9 +11,8 @@ import datetime
 import os
 import time
 
+import data.Thread
 from data.Thread import Thread
-
-sys.path.append('../')
 
 
 class Screen(Thread):

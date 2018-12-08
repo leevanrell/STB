@@ -1,13 +1,9 @@
-FROM python:3.6.7
-
+FROM ubuntu:18.04
 COPY . /app
 WORKDIR /app
-
-RUN apt-get install python3-tk
-
-RUN pip install virtualenv
-RUN virtualenv .
-RUN source ./bin/activate
-
-
-CMD ["python", "data.py"]
+RUN apt-get -y update && apt-get -y upgrade && apt-get -y install \
+	python3 \
+	python3-tk
+RUN apt-get -y install python3-pip
+RUN pip3 install -r requirements.txt
+CMD["python", "src/data.py"]

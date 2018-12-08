@@ -11,42 +11,35 @@ import logging
 import datetime
 import asyncio
 import argparse
+import os
 
 from data.GenericRSS_Data import RSS
 #from src.data.Stock_Data import Stock
 from data.Wiki_Data import Wiki
 from data.Screen_Data import Screen
 
+PATH = os.path.dirname(os.path.abspath(__file__))
+
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 fmt = logging.Formatter('%(asctime)s - %(threadName)-11s -  %(levelname)s - %(message)s')
 
-
-fh1 = logging.FileHandler('./logs/%s.log' % (datetime.datetime.now().strftime('%Y-%m-%d')))
+fh1 = logging.FileHandler('%s/logs/%s.log' % (PATH, datetime.datetime.now().strftime('%Y-%m-%d')))
 fh1.setLevel(logging.DEBUG)
 fh1.setFormatter(fmt)
 logger.addHandler(fh1)
 
-
-fh2 = logging.FileHandler('./logs/data.log')
+fh2 = logging.FileHandler('%s/logs/data.log' % (PATH))
 fh2.setLevel(logging.INFO)
 fh2.setFormatter(fmt)
 logger.addHandler(fh2)
 
-# ch = logging.StreamHandler()
-# ch.setLevel(logging.DEBUG)
-# ch.setFormatter(fmt)
-# logger.addHandler(ch)
+Ticker_file = '%s/conf/ticker.txt' % PATH
+RSS_DB_file = '%s/conf/rss.db' % PATH
+Stock_DB_file = '%s/conf/stock.db' % PATH
+Wiki_DB_file = '%s/conf/wiki.db' % PATH
 
 #Alpha_api_key = '2RPX5G5M7XOXMDJU'
-
-Ticker_file = './conf/ticker.txt'
-RSS_DB_file = './conf/rss.db'
-Stock_DB_file = './conf/stock.db'
-Wiki_DB_file = './conf/wiki.db'
-
-Processes_Count = 4
-Fin_TIMEOUT = 5
 VERSION = '0.2'
 
 
