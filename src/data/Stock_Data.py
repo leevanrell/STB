@@ -16,9 +16,9 @@ import logging
 import sqlite3
 import json
 
-from lib.data.Thread import Thread
+from data.Thread import Thread
 
-sys.path.append('../../')
+sys.path.append('../')
 
 
 class Stock(Thread):

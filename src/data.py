@@ -12,23 +12,23 @@ import datetime
 import asyncio
 import argparse
 
-from src.data.GenericRSS_Data import RSS
+from data.GenericRSS_Data import RSS
 #from src.data.Stock_Data import Stock
-from src.data.Wiki_Data import Wiki
-from src.data.Screen_Data import Screen
+from data.Wiki_Data import Wiki
+from data.Screen_Data import Screen
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 fmt = logging.Formatter('%(asctime)s - %(threadName)-11s -  %(levelname)s - %(message)s')
 
 
-fh1 = logging.FileHandler('./data/logs/%s.data_debug.log' % (datetime.datetime.now().strftime('%Y-%m-%d')))
+fh1 = logging.FileHandler('./logs/%s.log' % (datetime.datetime.now().strftime('%Y-%m-%d')))
 fh1.setLevel(logging.DEBUG)
 fh1.setFormatter(fmt)
 logger.addHandler(fh1)
 
 
-fh2 = logging.FileHandler('./data/logs/data.log')
+fh2 = logging.FileHandler('./logs/data.log')
 fh2.setLevel(logging.INFO)
 fh2.setFormatter(fmt)
 logger.addHandler(fh2)
@@ -38,12 +38,12 @@ logger.addHandler(fh2)
 # ch.setFormatter(fmt)
 # logger.addHandler(ch)
 
-Alpha_api_key = '2RPX5G5M7XOXMDJU'
+#Alpha_api_key = '2RPX5G5M7XOXMDJU'
 
-Ticker_file = './data/ticker.txt'
-RSS_DB_file = './data/rss.db'
-Stock_DB_file = './data/stock.db'
-Wiki_DB_file = './data/wiki.db'
+Ticker_file = './conf/ticker.txt'
+RSS_DB_file = './conf/rss.db'
+Stock_DB_file = './conf/stock.db'
+Wiki_DB_file = './conf/wiki.db'
 
 Processes_Count = 4
 Fin_TIMEOUT = 5
@@ -55,20 +55,19 @@ def main(verbose):
 	loop = asyncio.get_event_loop()
 	#executor = ProcessPoolExecutor()
 	Yahoo_Data = RSS(logger, RSS_DB_file, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Ticker_file)
-	#Stock_Data = Stock(logger, Stock_DB_file, Alpha_api_key, Ticker_file)
 	Wiki_Data = Wiki(logger, Wiki_DB_file, Ticker_file)
+	#Stock_Data = Stock(logger, Stock_DB_file, Alpha_api_key, Ticker_file)
 
 	future_Yahoo = loop.run_in_executor(None, Yahoo_Data.run, loop)
-	#future_Stock = loop.run_in_executor(None, Stock_Data.run, loop)
 	future_Wiki = loop.run_in_executor(None, Wiki_Data.run, loop)
+	#future_Stock = loop.run_in_executor(None, Stock_Data.run, loop)
 	#Threads = [Yahoo_Data, Stock_Data, Wiki_Data]
 	Threads = [Yahoo_Data, Wiki_Data]
 
+	Screen_Data = None
 	if verbose:
 		Screen_Data = Screen(logger, VERSION, Threads)
 		future_Screen = loop.run_in_executor(None, Screen_Data.run, loop)
-	else:
-		Screen_Data = None
 
 	try:
 		loop.run_forever()

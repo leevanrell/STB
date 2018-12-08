@@ -15,9 +15,9 @@ import logging
 import sqlite3
 import time
 
-from lib.data.Thread import Thread
+from data.Thread import Thread
 
-sys.path.append('../../')
+sys.path.append('../')
 
 
 class Wiki(Thread):
@@ -65,7 +65,7 @@ class Wiki(Thread):
 	def insertDB(self, documents):
 		conn = sqlite3.connect(self.DB_file)
 		c = conn.cursor()
-		c.executemany("""INSERT OR IGNORE INTO Wiki (day, company, views) VALUES (?, ?, ?)""", documents)
+		c.executemany("""INSERT OR REPLACE INTO Wiki (day, company, views) VALUES (?, ?, ?)""", documents)
 		conn.commit()
 		c.close()
 		conn.close()

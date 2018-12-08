@@ -18,9 +18,9 @@ import sys
 import sqlite3
 import logging
 
-from lib.data.Thread import Thread
+from data.Thread import Thread
 
-sys.path.append('../../')
+sys.path.append('../')
 
 
 class RSS(Thread):
@@ -71,7 +71,7 @@ class RSS(Thread):
 		try:
 			return BeautifulSoup(data['summary'], 'lxml').text
 		except Exception as e:
-			self.logger.error('[{0}] Bad Entry: {:10s}'.format(self.Name, data['summary']))
+			self.logger.error('[%s] Bad Entry: %s' % (self.Name, data['summary'][0:15]))
 			return ':('
 
 	def getTime(self, data):
