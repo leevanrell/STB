@@ -5,20 +5,49 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import yaml
 
-from lib.machine.DF import DF
+# import backtrader as bt
+
+# from pipeline_live.engine import LivePipelineEngine
+# from pipeline_live.data.sources.iex import list_symbols
+# from pipeline_live.data.iex.pricing import USEquityPricing
+# from pipeline_live.data.iex.fundamentals import IEXKeyStats
+# from pipeline_live.data.iex.factors import AverageDollarVolume
+# from zipline.pipeline import Pipeline
+
+# from pylivetrader.api import order_target, symbol
+
+
+import alpaca_trade_api as tradeapi
 
 DAYS = 14
 Stock_file = './data/stock.db'
 Wiki_file = './data/wiki.db'
+Aplaca_file = './data/config.yaml'
+
+paper_API = 'https://paper-api.alpaca.markets'
+markt_API = 'https://data.alpaca.markets/v1'
 
 
 def main():
-	df = DF(Stock_file, Wiki_file)
-	RNN_df = df.data.drop(['EMA20', 'SMA20', 'SMA50', 'SMA200', 'RSI', 'MACD', 'views', 'one', 'volume'], axis=1)
-	RNN_df = RNN_df.dropna()
-	#print(RNN_df)
-	RNN(RNN_df)
+	# df = DF(Stock_file, Wiki_file)
+	# RNN_df = df.data.drop(['EMA20', 'SMA20', 'SMA50', 'SMA200', 'RSI', 'MACD', 'views', 'one', 'volume'], axis=1)
+	# RNN_df = RNN_df.dropna()
+	# #print(RNN_df)
+	# RNN(RNN_df)
+	getAplaca()
+
+
+def getAplaca():
+	key_id, secret_key = getKeys()
+	api = tradeapi.REST(key_id, secret_key, paper_API)
+	account = api.get_account()
+
+
+def getKeys():
+	config = yaml.safe_load(open(Aplaca_file))
+	return config['key_id'], config['secret']
 
 
 def feedforward(df):

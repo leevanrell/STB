@@ -55,13 +55,14 @@ def main(verbose):
 	loop = asyncio.get_event_loop()
 	#executor = ProcessPoolExecutor()
 	Yahoo_Data = RSS(logger, RSS_DB_file, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Ticker_file)
-	Stock_Data = Stock(logger, Stock_DB_file, Alpha_api_key, Ticker_file)
+	#Stock_Data = Stock(logger, Stock_DB_file, Alpha_api_key, Ticker_file)
 	Wiki_Data = Wiki(logger, Wiki_DB_file, Ticker_file)
 
 	future_Yahoo = loop.run_in_executor(None, Yahoo_Data.run, loop)
-	future_Stock = loop.run_in_executor(None, Stock_Data.run, loop)
+	#future_Stock = loop.run_in_executor(None, Stock_Data.run, loop)
 	future_Wiki = loop.run_in_executor(None, Wiki_Data.run, loop)
-	Threads = [Yahoo_Data, Stock_Data, Wiki_Data]
+	#Threads = [Yahoo_Data, Stock_Data, Wiki_Data]
+	Threads = [Yahoo_Data, Wiki_Data]
 
 	if verbose:
 		Screen_Data = Screen(logger, VERSION, Threads)
