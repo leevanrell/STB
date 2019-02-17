@@ -2,6 +2,7 @@
 **.db-journal
 **.log
 **.pyc
+**.key
 **.yaml
 **/bin
 **/include
