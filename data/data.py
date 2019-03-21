@@ -43,13 +43,14 @@ logger.addHandler(sh1)
 
 
 Alpha_api_key = '2RPX5G5M7XOXMDJU'
-db_name = 'stock'
 Proc_Count = 16
 VERSION = '0.3'
 
 NASDAQ_url = 'https://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nasdaq&render=download'
 NYSE_url = 'https://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nyse&render=download'
-		
+
+server = {'host': 'localhost', 'port': 9200}
+db_name = 'stock'
 
 def main(verbose):
 	logger.info('Starting STB v%s ' % VERSION)
@@ -136,6 +137,19 @@ def initDB():
 					},
 				}
 			},
+			"data_rss": {
+				"properties": {
+					"articles": {}
+					"article_date": {
+						"type": "date",
+						"format": "MM/dd/yyyy" # change date to MM/dd/yyyy
+					},
+					"upload_date": {
+						"type": "date",
+						"format": "MM/dd/yyyy" # change date to MM/dd/yyyy
+					},
+				}
+			}
 			"data_basic": {
 				"properties": {
 					"symbol": {"type": "keyword"},
@@ -163,7 +177,7 @@ def initDB():
 
 	
 	es.indices.delete(index='stock', ignore=[400, 404])
-	es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
+	es = Elasticsearch([server])
 	if not es.indices.exists(index="stock"):
 		es.indices.create(index=db_name, ignore=400, body=mappings)
 	else: 
