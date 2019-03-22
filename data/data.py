@@ -4,6 +4,8 @@
 	Each api typically get its own database
 	Currently collecting RSS data from yahoo.finance, Stock prices and indicatos from alphavantage, and wikipedia view counts.
 """
+__VERSION__ = '0.3'
+
 
 #from concurrent.futures import ProcessPoolExecutor
 #import concurrent.futures
@@ -13,13 +15,16 @@ import asyncio
 import argparse
 import os
 import time
+from concurrent.futures import ProcessPoolExecutor
+from elasticsearch import Elasticsearch
+
 
 import lib
-from elasticsearch import Elasticsearch
+from lib.GenericRSS_Data import RSS
+#from lib.Screen_Data import Screen
 from lib.Stocks_Data import Basics
 from lib.Stocks_Data import Stats
-from lib.GenericRSS_Data import RSS
-from lib.Screen_Data import Screen
+from lib.Upload_Data import Upload
 from lib.Wiki_Data import Wiki
 
 import conf
@@ -41,33 +46,38 @@ logger.addHandler(sh1)
 # fh2.setFormatter(fmt)
 # logger.addHandler(fh2)
 
-
 Alpha_api_key = '2RPX5G5M7XOXMDJU'
-db_name = 'stock'
 Proc_Count = 16
-VERSION = '0.3'
 
 NASDAQ_url = 'https://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nasdaq&render=download'
 NYSE_url = 'https://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nyse&render=download'
-		
+
+server = [{'host': 'localhost', 'port': 9200}]
+index_name = 'stock'
 
 def main(verbose):
-	logger.info('Starting STB v%s ' % VERSION)
+	logger.info('Starting STB v%s ' % __VERSION__)
 
 	initDB()
-	basics = Basics(logger)
-	s = time.time()
-	companies = basics.run()
-	print(companies)
-	print(time.time() - s)
+
 	loop = asyncio.get_event_loop()
+	q = asyncio.Queue()
 
 
-	NASDAQ_thread = Basics(logger, NASDAQ_url)
-	NYSE_thread = Basics(logger, NYSE_url)
+	NASDAQ_thread = Basics(logger, NASDAQ_url, index_name, 'data_basic', q)
+	#NYSE_thread = Basics(logger, NYSE_url, index_name, 'data_basic', q)
+	ES_thread = Upload(logger, server, index_name, q)
 	
 	loop.run_in_executor(None, NASDAQ_thread.run, loop)
-	loop.run_in_executor(None, NYSE_thread.run, loop)
+	loop.run_in_executor(None, ES_thread.run, loop)
+
+
+	#loop.run_in_executor(None, NYSE_thread.run, loop)
+
+	#executor = ProcessPoolExecutor()
+	#loop.run_in_executor(executor, NYSE_thread.run, loop)
+
+	loop.run_forever()
 
 	#companies_list = split_companies(Proc_Count)
 	#Yahoo_Data = RSS(logger, RSS_DB_file, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Ticker_file)
@@ -129,7 +139,7 @@ def initDB():
 				"properties": {
 					"symbol": {"type": "keyword"},
 					"company_name": {"type": "text"},
-					"wiki_views": {"type": "intger"},
+					"wiki_views": {"type": "integer"},
 					"date": {
 						"type": "date",
 						"format": "MM/dd/yyyy" # change date to MM/dd/yyyy
@@ -162,14 +172,15 @@ def initDB():
 	}
 
 	
+	es = Elasticsearch(server)
+
 	es.indices.delete(index='stock', ignore=[400, 404])
-	es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
 	if not es.indices.exists(index="stock"):
-		es.indices.create(index=db_name, ignore=400, body=mappings)
+		es.indices.create(index=index_name, ignore=400, body=mappings)
 	else: 
 		######remove in future
-		es.indices.delete(index=db_name, ignore=[400, 404])
-		es.indices.create(index=db_name, ignore=400, body=mappings)
+		es.indices.delete(index=index_name, ignore=[400, 404])
+		es.indices.create(index=index_name, ignore=400, body=mappings)
 
 
 # def split_companies(p):
