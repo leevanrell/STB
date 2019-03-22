@@ -1,0 +1,10 @@
+AMD : Advanced_Micro_Devices
+MSFT : Microsoft
+CRM : Salesforce.com
+INTC : Intel
+SQ : Squarespace
+AAPL : Apple_Inc.
+NVDA : Nvidia
+BA : Boeing
+V : Visa_Inc.
+ADBE : Adobe_Inc.

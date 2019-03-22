@@ -52,8 +52,9 @@ Proc_Count = 16
 NASDAQ_url = 'https://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nasdaq&render=download'
 NYSE_url = 'https://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nyse&render=download'
 
-server = [{'host': 'localhost', 'port': 9200}]
-index_name = 'stock'
+server = {'host': 'localhost', 'port': 9200}
+db_name = 'stock'
+
 
 def main(verbose):
 	logger.info('Starting STB v%s ' % __VERSION__)
@@ -146,6 +147,19 @@ def initDB():
 					},
 				}
 			},
+			"data_rss": {
+				"properties": {
+					"articles": {}
+					"article_date": {
+						"type": "date",
+						"format": "MM/dd/yyyy" # change date to MM/dd/yyyy
+					},
+					"upload_date": {
+						"type": "date",
+						"format": "MM/dd/yyyy" # change date to MM/dd/yyyy
+					},
+				}
+			}
 			"data_basic": {
 				"properties": {
 					"symbol": {"type": "keyword"},
@@ -172,9 +186,8 @@ def initDB():
 	}
 
 	
-	es = Elasticsearch(server)
-
 	es.indices.delete(index='stock', ignore=[400, 404])
+	es = Elasticsearch([server])
 	if not es.indices.exists(index="stock"):
 		es.indices.create(index=index_name, ignore=400, body=mappings)
 	else: 
