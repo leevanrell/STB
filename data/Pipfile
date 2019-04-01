@@ -13,6 +13,7 @@ elasticsearch = "*"
 lxml = "*"
 numpy = "*"
 quandl = "*"
+pyti = "*"
 
 [requires]
 python_version = "3.6"

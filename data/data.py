@@ -27,7 +27,6 @@ from lib.Stocks_Data import Basics
 from lib.Upload_Data import Upload
 from lib.Wiki_Data import Wiki
 
-import conf
 import conf.config
 
 PATH = os.path.dirname(os.path.abspath(__file__))
@@ -46,15 +45,6 @@ logger.addHandler(sh1)
 # fh2.setFormatter(fmt)
 # logger.addHandler(fh2)
 
-Alpha_api_key = '2RPX5G5M7XOXMDJU'
-Proc_Count = 16
-
-NASDAQ_url = 'https://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nasdaq&render=download'
-NYSE_url = 'https://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nyse&render=download'
-
-server = {'host': 'localhost', 'port': 9200}
-db_name = 'stock'
-
 
 def main(verbose):
 	logger.info('Starting STB v%s ' % __VERSION__)
@@ -65,7 +55,7 @@ def main(verbose):
 	q = asyncio.Queue()
 
 
-	NASDAQ_thread = Basics(logger, NASDAQ_url, db_name, q)
+	NASDAQ_thread = Basics(logger, NASDAQ_url, Quandl_api_key db_name, q)
 	#NYSE_thread = Basics(logger, NYSE_url, index_name, 'data_basic', q)
 	#ES_thread = Upload(logger, server, index_name, q)
 	
@@ -186,8 +176,6 @@ def initDB():
 		}
 	}
 
-	
-	es.indices.delete(index='stock', ignore=[400, 404])
 	es = Elasticsearch([server])
 	if not es.indices.exists(index="stock"):
 		es.indices.create(index=index_name, ignore=400, body=mappings)
@@ -196,13 +184,6 @@ def initDB():
 		es.indices.delete(index=index_name, ignore=[400, 404])
 		es.indices.create(index=index_name, ignore=400, body=mappings)
 
-
-# def split_companies(p):
-# 	with open(Company_file, 'r') as f:
-# 		companies = [ l.strip() for l in f.readlines()]
-# 	n = int(len(companies) / p) 
-# 	companies_list = [companies[i * n:(i + 1) * n] for i in range((len(companies) + n - 1) // n )] 
-# 	return companies_list
 
 
 def stopThreads(threads, screen):
