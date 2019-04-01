@@ -20,10 +20,10 @@ from elasticsearch import Elasticsearch
 
 
 import lib
-from lib.GenericRSS_Data import RSS
+#from lib.RSS_Data import RSS
 #from lib.Screen_Data import Screen
 from lib.Stocks_Data import Basics
-from lib.Stocks_Data import Stats
+#from lib.Stocks_Data import Stats
 from lib.Upload_Data import Upload
 from lib.Wiki_Data import Wiki
 
@@ -65,9 +65,9 @@ def main(verbose):
 	q = asyncio.Queue()
 
 
-	NASDAQ_thread = Basics(logger, NASDAQ_url, index_name, 'data_basic', q)
+	NASDAQ_thread = Basics(logger, NASDAQ_url, db_name, q)
 	#NYSE_thread = Basics(logger, NYSE_url, index_name, 'data_basic', q)
-	ES_thread = Upload(logger, server, index_name, q)
+	#ES_thread = Upload(logger, server, index_name, q)
 	
 	loop.run_in_executor(None, NASDAQ_thread.run, loop)
 	loop.run_in_executor(None, ES_thread.run, loop)
@@ -115,6 +115,29 @@ def initDB():
 			"number_of_replicas" : 1
 		},
 		"mappings": {
+			"data_basic": {
+				"properties": {
+					"symbol": {"type": "keyword"},
+					"name": {"type": "text"},		
+					"price_close": {"type": "float"},
+					"mkt_cap": { "type": "integer"},
+					"avg_volume": {"type": "integer"},
+					"sector": {"type": "text"},	
+					"industry": {"type": "text"},	
+					'upload_date': { 
+						"type": "date",
+						"format": "MM/dd/yyyy"
+					},	
+					"IPO_year": { 
+						"type": "date",
+						"format": "yyyy"
+					},	
+					"next_earnings" : { 
+						"type": "date",
+						"format": "MM/dd/yyyy"
+					},
+				}
+			},
 			"data_stats": {
 				"properties": { 
 					"symbol": { "type": "keyword"},
@@ -149,7 +172,7 @@ def initDB():
 			},
 			"data_rss": {
 				"properties": {
-					"articles": {}
+					"article": {"type" : "text"},
 					"article_date": {
 						"type": "date",
 						"format": "MM/dd/yyyy" # change date to MM/dd/yyyy
@@ -157,28 +180,6 @@ def initDB():
 					"upload_date": {
 						"type": "date",
 						"format": "MM/dd/yyyy" # change date to MM/dd/yyyy
-					},
-				}
-			}
-			"data_basic": {
-				"properties": {
-					"symbol": {"type": "keyword"},
-					"name": {"type": "text"},
-					"sector": {"type": "text"},			
-					"price_close": {"type": "float"},
-					"mkt_cap": { "type": "integer"},
-					"avg_volume": {"type": "integer"},
-					'upload_date': { 
-						"type": "date",
-						"format": "MM/dd/yyyy"
-					},	
-					"IPO_year": { 
-						"type": "date",
-						"format": "yyyy"
-					},	
-					"next_earnings" : { 
-						"type": "date",
-						"format": "MM/dd/yyyy"
 					},
 				}
 			}

@@ -12,6 +12,7 @@ mwviews = "*"
 elasticsearch = "*"
 lxml = "*"
 numpy = "*"
+quandl = "*"
 
 [requires]
 python_version = "3.6"
