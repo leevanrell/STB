@@ -46,29 +46,15 @@ logger.addHandler(sh1)
 # logger.addHandler(fh2)
 
 
-def main(verbose):
+def main(args):
 	logger.info('Starting STB v%s ' % __VERSION__)
 
-	initDB()
-
-	loop = asyncio.get_event_loop()
-	q = asyncio.Queue()
-
-
-	NASDAQ_thread = Basics(logger, NASDAQ_url, Quandl_api_key db_name, q)
-	#NYSE_thread = Basics(logger, NYSE_url, index_name, 'data_basic', q)
-	#ES_thread = Upload(logger, server, index_name, q)
-	
-	loop.run_in_executor(None, NASDAQ_thread.run, loop)
-	loop.run_in_executor(None, ES_thread.run, loop)
-
-
-	#loop.run_in_executor(None, NYSE_thread.run, loop)
-
-	#executor = ProcessPoolExecutor()
-	#loop.run_in_executor(executor, NYSE_thread.run, loop)
-
-	loop.run_forever()
+	if args.init:
+		logger.info('Performing Setup')
+		init_STB()
+	else:
+		logger.info('Starting Update Daemon')
+		pass
 
 	#companies_list = split_companies(Proc_Count)
 	#Yahoo_Data = RSS(logger, RSS_DB_file, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Ticker_file)
@@ -98,7 +84,33 @@ def main(verbose):
 	# waitforThreads(Threads, Screen_Data)
 	# loop.close()
 
+
+def init_STB():
+	initDB()
+
+
+	loop = asyncio.get_event_loop()
+	q = asyncio.Queue()
+
+	NASDAQ_thread = Basics(logger, db_name, q, NASDAQ_url)
+	NYSE_thread = Basics(logger, db_name, q, NYSE_url)
+	ES_thread = Upload(logger, server, index_name, q)
+	Threads = [NASDAQ_thread, NYSE_thread]
+
+	loop.run_in_executor(None, NASDAQ_thread.run, loop)
+	loop.run_in_executor(None, NYSE_thread.run, loop)
+	loop.run_in_executor(None, ES_thread.run, loop)
+
+	logger.info('Gathering Basic info on NASDAQ and NYSE companies')
+	#executor = ProcessPoolExecutor()
+	loop.run_forever()
+	waitforThreads(Threads)
+	ES_thread.Running = False
+	waitforThreads([ES_thread])
+
+
 def initDB():
+	logger.info('Initializing Elasticsearch at %s' % server)
 	mappings = {
 		"settings": {
 			"number_of_shards" :   5,
@@ -195,18 +207,15 @@ def stopThreads(threads, screen):
 		screen.Running = False
 
 
-def waitforThreads(threads, screen):
+def waitforThreads(threads):
 	for thread in threads:
 		while not thread.Fin:
-			pass
-	if screen:
-		while not screen.Fin:
-			pass
+			sleep(1)
 	logger.info('Fin.')
 
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Data Collector for STB')
-	parser.add_argument('--verbose', dest='verbose', action='store_true')
+	parser.add_argument('--init', dest='start_state', action='store_true')
 	parser.set_defaults(verbose=False)
-	main(parser.parse_args().verbose)
+	main(parser.parse_args())
