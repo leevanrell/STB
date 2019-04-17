@@ -18,12 +18,8 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from elasticsearch import Elasticsearch
 
-
-import lib
-#from lib.RSS_Data import RSS
-#from lib.Screen_Data import Screen
-from lib.Stocks_Data import Basics
-#from lib.Stocks_Data import Stats
+from lib.Stock_Data import Basics, Stats
+from lib.RSS_Data import RSS
 from lib.Upload_Data import Upload
 from lib.Wiki_Data import Wiki
 
@@ -51,10 +47,37 @@ def main(args):
 
 	if args.init:
 		logger.info('Performing Setup')
-		init_STB()
-	else:
-		logger.info('Starting Update Daemon')
-		pass
+		initSTB()
+	if args.rssd or args.statsd or args.wikid:
+		watch_list = getWatchList()
+		q = asyncio.Queue()
+		Threads = [Upload(logger, server, index, q)]
+
+		if args.rssd:
+			RSS_thread = RSS(logger, index, q, watch_list)
+			Threads.append(RSS_thread)
+		if args.statsd:
+			Stats_thread = Stats(logger, index, q, watch_list, Alpha_API_Key)
+			Threads.append(Stats_thread) 
+			logger, DB_file, Ticker_file
+		if args.wikid:
+			Wiki_thread = Wiki(logger, index, q, watch_list)
+			Threads.append(Wiki_thread)
+
+		loop = asyncio.get_event_loop()
+		for thread in Threads:
+			loop.run_in_executor(None, thread.run, loop)
+
+		loop.run_forever()
+		waitforThreads(Threads)
+		ES_thread.Running = False
+		waitforThreads([ES_thread])
+
+		try:
+			loop.run_forever()
+		except KeyboardInterrupt:
+			stopThreads(Threads)
+		loop.close()
 
 	#companies_list = split_companies(Proc_Count)
 	#Yahoo_Data = RSS(logger, RSS_DB_file, 'Yahoo', 'http://finance.yahoo.com/rss/headline?s=', Ticker_file)
@@ -85,137 +108,60 @@ def main(args):
 	# loop.close()
 
 
-def init_STB():
+def initSTB():
 	initDB()
 
-
-	loop = asyncio.get_event_loop()
 	q = asyncio.Queue()
 
-	NASDAQ_thread = Basics(logger, db_name, q, NASDAQ_url)
-	NYSE_thread = Basics(logger, db_name, q, NYSE_url)
-	ES_thread = Upload(logger, server, index_name, q)
-	Threads = [NASDAQ_thread, NYSE_thread]
+	NASDAQ_thread = Basics(logger, index, q, NASDAQ_url)
+	NYSE_thread = Basics(logger, index, q, NYSE_url)
+	ES_thread = Upload(logger, server, index, q)
+	Threads = [ES_thread, NASDAQ_thread, NYSE_thread]
 
-	loop.run_in_executor(None, NASDAQ_thread.run, loop)
-	loop.run_in_executor(None, NYSE_thread.run, loop)
-	loop.run_in_executor(None, ES_thread.run, loop)
+	loop = asyncio.get_event_loop()
+	#executor = ProcessPoolExecutor()
+	for thread in Threads:
+		loop.run_in_executor(None, thread.run, loop)
 
 	logger.info('Gathering Basic info on NASDAQ and NYSE companies')
-	#executor = ProcessPoolExecutor()
 	loop.run_forever()
 	waitforThreads(Threads)
 	ES_thread.Running = False
 	waitforThreads([ES_thread])
+	loop.close()
 
 
 def initDB():
 	logger.info('Initializing Elasticsearch at %s' % server)
-	mappings = {
-		"settings": {
-			"number_of_shards" :   5,
-			"number_of_replicas" : 1
-		},
-		"mappings": {
-			"data_basic": {
-				"properties": {
-					"symbol": {"type": "keyword"},
-					"name": {"type": "text"},		
-					"price_close": {"type": "float"},
-					"mkt_cap": { "type": "integer"},
-					"avg_volume": {"type": "integer"},
-					"sector": {"type": "text"},	
-					"industry": {"type": "text"},	
-					'upload_date': { 
-						"type": "date",
-						"format": "MM/dd/yyyy"
-					},	
-					"IPO_year": { 
-						"type": "date",
-						"format": "yyyy"
-					},	
-					"next_earnings" : { 
-						"type": "date",
-						"format": "MM/dd/yyyy"
-					},
-				}
-			},
-			"data_stats": {
-				"properties": { 
-					"symbol": { "type": "keyword"},
-					"price_last": { "type": "float"},
-					"date": { 
-						"type": "date",
-						"format": "MM/dd/yyyy" # change date to MM/dd/yyyy
-					},
-					"price_open": { "type": "float"},
-					"price_high": { "type": "float"},
-					"price_low": { "type": "float"},
-					"price_close": {"type": "float"},
-					"vol": { "type": "integer"},                
-					"EMA20": {"type": "float"},
-					"SMA20": {"type": "float"},
-					"SMA50": {"type": "float"},                
-					"SMA200": {"type": "float"},
-					"RSI": {"type": "float"},
-					"MACD": {"type": "float"}
-				}
-			},
-			"data_wiki": {
-				"properties": {
-					"symbol": {"type": "keyword"},
-					"company_name": {"type": "text"},
-					"wiki_views": {"type": "integer"},
-					"date": {
-						"type": "date",
-						"format": "MM/dd/yyyy" # change date to MM/dd/yyyy
-					},
-				}
-			},
-			"data_rss": {
-				"properties": {
-					"article": {"type" : "text"},
-					"article_date": {
-						"type": "date",
-						"format": "MM/dd/yyyy" # change date to MM/dd/yyyy
-					},
-					"upload_date": {
-						"type": "date",
-						"format": "MM/dd/yyyy" # change date to MM/dd/yyyy
-					},
-				}
-			}
-		}
-	}
 
 	es = Elasticsearch([server])
 	if not es.indices.exists(index="stock"):
-		es.indices.create(index=index_name, ignore=400, body=mappings)
-	else: 
-		######remove in future
-		es.indices.delete(index=index_name, ignore=[400, 404])
-		es.indices.create(index=index_name, ignore=400, body=mappings)
+		es.indices.create(index=index, ignore=400, body=es_mappings)
+	# else: 
+	# 	es.indices.delete(index=index, ignore=[400, 404])
+	# 	es.indices.create(index=index, ignore=400, body=es_mappings)
 
-
-
-def stopThreads(threads, screen):
-	print('\r')
-	logger.info('Detected KeyboardInterrupt')
-	for thread in threads:
-		thread.Running = False
-	if screen:
-		screen.Running = False
-
+def getWatchlist():
+	pass
 
 def waitforThreads(threads):
-	for thread in threads:
+	for thread in threads[1:]:
 		while not thread.Fin:
-			sleep(1)
+			sleep(5)
+	threads[0].Running = False
+	while not threads[0].Fin:
+		sleep(1)
 	logger.info('Fin.')
 
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Data Collector for STB')
-	parser.add_argument('--init', dest='start_state', action='store_true')
-	parser.set_defaults(verbose=False)
+	parser.add_argument('--init', dest='init', action='store_true')
+	parser.set_defaults(init=False)
+	parser.add_argument('--rssd', dest='rssd', action='store_true')
+	parser.set_defaults(rssd=False)
+	parser.add_argument('--statsd', dest='statsd', action='store_true')
+	parser.set_defaults(statsd=False)
+	parser.add_argument('--wikid', dest='wikid', action='store_true')
+	parser.set_defaults(wikid=False)
 	main(parser.parse_args())
