@@ -14,6 +14,7 @@ lxml = "*"
 numpy = "*"
 quandl = "*"
 pyti = "*"
+proxybroker = "*"
 
 [requires]
 python_version = "3.6"
