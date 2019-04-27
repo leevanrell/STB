@@ -15,6 +15,7 @@ import asyncio
 import argparse
 import os
 import time
+import sys
 import codecs
 import numpy
 import csv
@@ -140,7 +141,7 @@ def initSTB():
 	for i in range(0, Threads_count):
 		thread = Basics(logger, index_names[0], q, i, Companies[i])
 		Threads.append(thread)
-
+	sys.exit(0)
 	loop = asyncio.get_event_loop()
 	# #executor = ProcessPoolExecutor(Threads_count)
 	for thread in Threads:
@@ -173,7 +174,7 @@ def initDB():
 def getWatchlist():
 	pass
 
-
+# FIX
 def waitforThreads(threads):
 	for thread in threads[1:]:
 		while not thread.Fin:
