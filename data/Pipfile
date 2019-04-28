@@ -12,7 +12,6 @@ mwviews = "*"
 elasticsearch = "*"
 lxml = "*"
 numpy = "*"
-quandl = "*"
 pyti = "*"
 proxybroker = "*"
 

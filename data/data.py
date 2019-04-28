@@ -57,8 +57,9 @@ logger.addHandler(fh2)
 def main(args):
 	logger.info('Starting STB v%s ' % __VERSION__)
 
+	if args.purge:
+		deleteDB()
 	if args.init:
-		logger.info('Performing Setup')
 		initSTB()
 	if args.rssd or args.statsd or args.wikid:
 		watch_list = getWatchList()
@@ -139,40 +140,44 @@ def initSTB():
 	ES_thread = Upload(logger, server, 5, q)
 	Threads = [ES_thread]
 	for i in range(0, Threads_count):
-		thread = Basics(logger, index_names[0], q, i, Companies[i])
+		thread = Basics(logger, index_names[0], q, i, Companies[i], proxy_host + proxy_port)
 		Threads.append(thread)
-	sys.exit(0)
 	loop = asyncio.get_event_loop()
 	# #executor = ProcessPoolExecutor(Threads_count)
 	for thread in Threads:
 		loop.run_in_executor(None, thread.run, loop)
 	logger.info('Gathering Basic info on NASDAQ and NYSE companies')
+
+	broker = Broker(max_tries=1, loop=loop)
+	broker.serve(host=proxy_host, port=proxy_port, types=proxy_types, limit=10, max_tries=3,
+		prefer_connect=True, min_req_proxy=5, max_error_rate=0.5,
+		max_resp_time=8, http_allowed_codes=proxy_codes, backlog=100)
+
 	loop.run_forever()
 	waitforThreads(Threads)
 	ES_thread.Running = False
 	waitforThreads([ES_thread])
+	broker.stop()
 	loop.close()
 
 
 def initDB():
-	logger.info('Initializing Elasticsearch at %s' % server)
+	logger.info('Initializing indexs %s at %s' % (index_names, server))
 
 	es = Elasticsearch([server])
+	[es.indices.create(index=index, ignore=400, body=es_mappings[0]) for index in index_names]
 
-	# es.indices.delete(index=index_names[0], ignore=404)
-	# es.indices.delete(index=index_names[1], ignore=404)
-	# es.indices.delete(index=index_names[2], ignore=404)
-	# es.indices.delete(index=index_names[3], ignore=404)
-	# es.indices.delete(index=index_names[4], ignore=404)
-	es.indices.create(index=index_names[0], ignore=400, body=es_mappings[0])
-	es.indices.create(index=index_names[1], ignore=400, body=es_mappings[1])
-	es.indices.create(index=index_names[2], ignore=400, body=es_mappings[2])
-	es.indices.create(index=index_names[3], ignore=400, body=es_mappings[3])
-	es.indices.create(index=index_names[4], ignore=400, body=es_mappings[4])
+
+def deleteDB():
+	logger.info('Purging indexes %s at %s' % (index_names, server))
+
+	es = Elasticsearch([server])
+	[es.indices.delete(index=index, ignore=404) for index in index_names]
 
 
 def getWatchlist():
 	pass
+
 
 # FIX
 def waitforThreads(threads):
@@ -194,6 +199,9 @@ def divide_chunks(l, n):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Data Collector for STB')
+
+	parser.add_argument('--purge', dest='purge', action='store_true')
+	parser.set_defaults(purge=False)
 	parser.add_argument('--init', dest='init', action='store_true')
 	parser.set_defaults(init=False)
 	parser.add_argument('--rssd', dest='rssd', action='store_true')

@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "fb6d6eb46fb8f3abca6f9b05334340517ee69e9e7db3a4bfab85880133211881"
+            "sha256": "412e1e446157780454647c7992ec36cbc7e7235c120e88521c209ba88e1877a7"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -163,12 +163,6 @@
             "markers": "python_version < '3.7'",
             "version": "==1.1.0"
         },
-        "inflection": {
-            "hashes": [
-                "sha256:18ea7fb7a7d152853386523def08736aa8c32636b047ade55f7578c4edeb16ca"
-            ],
-            "version": "==0.3.1"
-        },
         "lxml": {
             "hashes": [
                 "sha256:03984196d00670b2ab14ae0ea83d5cc0cfa4f5a42558afa9ab5fa745995328f5",
@@ -206,13 +200,6 @@
                 "sha256:df1451bcd848199905ac0de4631b3d02d6a655ad28ba5e5a4ca29a23358db712"
             ],
             "version": "==1.4.1"
-        },
-        "more-itertools": {
-            "hashes": [
-                "sha256:2112d2ca570bb7c3e53ea1a35cd5df42bb0fd10c45f0fb97178679c3c03d64c7",
-                "sha256:c3e4748ba1aad8dba30a4886b0b1a2004f9a863837b8654e7059eebf727afa5a"
-            ],
-            "version": "==7.0.0"
         },
         "multidict": {
             "hashes": [
@@ -358,7 +345,6 @@
         },
         "pycparser": {
             "hashes": [
-                "sha256:489c0278efcdb538c7c808bb170ed84ca1d1839782e0b878ec79a68c6d9d3ebd",
                 "sha256:a988718abfad80b6b157acce7bf130a30876d27603738ac39f140993246b25b3"
             ],
             "version": "==2.19"
@@ -385,14 +371,6 @@
                 "sha256:d747dd3d23d77ef44c6a3526e274af6efeb0a6f1afd5a69ba4d5be4098c8e141"
             ],
             "version": "==2019.1"
-        },
-        "quandl": {
-            "hashes": [
-                "sha256:8f24dbfb0832a19c2eee5c2aa317fa6bc87ecb977c1a0515e8aaad42a4456595",
-                "sha256:b049ebb6f8e028605d0de9e05cc58a32992f5958312b1dc648a7486e8a234946"
-            ],
-            "index": "pypi",
-            "version": "==3.4.6"
         },
         "requests": {
             "hashes": [
