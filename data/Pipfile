@@ -14,6 +14,7 @@ lxml = "*"
 numpy = "*"
 pyti = "*"
 proxybroker = "*"
+selenium = "*"
 
 [requires]
 python_version = "3.6"

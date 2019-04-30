@@ -3,10 +3,6 @@
 
 """
 
-
-#api keys
-Alpha_API_Key = 'YOUR API KEY'
-
 #elasticsearch config
 server = {'host': 'localhost', 'port': 9200}
 index = 'stock' 

@@ -19,11 +19,13 @@ import sys
 import codecs
 import numpy
 import csv
+from time import sleep
 from urllib.request import urlopen
 from concurrent.futures import ProcessPoolExecutor
 from elasticsearch import Elasticsearch
 
-from lib.Proxy_Basic_Data import Basics
+#from lib.Parallel import run as Basics
+from lib.Basic_Data import Basics
 from lib.Stats_Data import Stats
 from lib.RSS_Data import RSS
 from lib.Upload_Data import Upload
@@ -68,7 +70,7 @@ def main(args):
 		ES_thread = Upload(logger, server, 5, q)
 		Threads = [ES_thread]
 		if args.statsd:
-			Stats_thread = Stats(logger, index_name[2], q, watch_list, Alpha_API_Key)
+			Stats_thread = Stats(logger, index_name[2], q, watch_list)
 			Threads.append(Stats_thread) 
 		if args.wikid:
 			Wiki_thread = Wiki(logger, index_name[3], q, watch_list)
@@ -81,7 +83,10 @@ def main(args):
 		for thread in Threads:
 			loop.run_in_executor(None, thread.run, loop)
 
-		loop.run_forever()
+		try:
+			loop.run_forever()
+		except KeyboardInterrupt:
+			pass
 		waitforThreads(Threads)
 		ES_thread.Running = False
 		waitforThreads([ES_thread])
@@ -136,70 +141,55 @@ def initSTB():
 
 	Companies = list(NASDAQ + NYSE)
 	Companies = list(divide_chunks(Companies, Threads_count))
-
-	ES_thread = Upload(logger, server, 5, q)
-	Threads = [ES_thread]
-	for i in range(0, Threads_count):
-		thread = Basics(logger, index_names[0], q, i, Companies[i], proxy_host + proxy_port)
-		Threads.append(thread)
+	
 	loop = asyncio.get_event_loop()
-	# #executor = ProcessPoolExecutor(Threads_count)
-	for thread in Threads:
-		loop.run_in_executor(None, thread.run, loop)
+	threads = []
+	futures = []
+	for i in range(0, Threads_count):
+		thread = Basics(logger, index_names[0], q, i, Companies[i])
+		futures.append(loop.run_in_executor(None, thread.run, loop))
+		threads.append(thread)
+	ES_thread = Upload(logger, q, server, bulk_size, threads)
+	futures.append(loop.run_in_executor(None, ES_thread.run, loop))
+
 	logger.info('Gathering Basic info on NASDAQ and NYSE companies')
 
-	broker = Broker(max_tries=1, loop=loop)
-	broker.serve(host=proxy_host, port=proxy_port, types=proxy_types, limit=10, max_tries=3,
-		prefer_connect=True, min_req_proxy=5, max_error_rate=0.5,
-		max_resp_time=8, http_allowed_codes=proxy_codes, backlog=100)
-
-	loop.run_forever()
-	waitforThreads(Threads)
-	ES_thread.Running = False
-	waitforThreads([ES_thread])
-	broker.stop()
+	# broker = Broker(max_tries=1, loop=loop)
+	# broker.serve(host=proxy_host, port=proxy_port, types=proxy_types, limit=10, max_tries=3,
+	# 	prefer_connect=True, min_req_proxy=5, max_error_rate=0.5,
+	# 	max_resp_time=8, http_allowed_codes=proxy_codes, backlog=100)
+	for future in futures:
+		loop.run_until_complete(future)
+	while not ES_thread.Fin:
+		sleep(10)
+	#broker.stop()
 	loop.close()
 
 
 def initDB():
 	logger.info('Initializing indexs %s at %s' % (index_names, server))
-
 	es = Elasticsearch([server])
 	[es.indices.create(index=index, ignore=400, body=es_mappings[0]) for index in index_names]
 
 
 def deleteDB():
 	logger.info('Purging indexes %s at %s' % (index_names, server))
-
 	es = Elasticsearch([server])
 	[es.indices.delete(index=index, ignore=404) for index in index_names]
 
 
-def getWatchlist():
-	pass
-
-
-# FIX
-def waitforThreads(threads):
-	for thread in threads[1:]:
-		while not thread.Fin:
-			sleep(5)
-	threads[0].Running = False
-	while not threads[0].Fin:
-		sleep(1)
-	logger.info('Fin.')
-
-
-def divide_chunks(l, n): 
-      
-    # looping till length l 
-    for i in range(0, len(l), n):  
-        yield l[i:i + n] 
+def divide_chunks(seq, num): 
+    avg = len(seq) / float(num)
+    out = []
+    last = 0.0
+    while last < len(seq):
+        out.append(seq[int(last):int(last + avg)])
+        last += avg
+    return out
 
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Data Collector for STB')
-
 	parser.add_argument('--purge', dest='purge', action='store_true')
 	parser.set_defaults(purge=False)
 	parser.add_argument('--init', dest='init', action='store_true')
