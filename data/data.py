@@ -4,7 +4,7 @@
 	Each api typically get its own database
 	Currently collecting RSS data from yahoo.finance, Stock prices and indicatos from alphavantage, and wikipedia view counts.
 """
-__VERSION__ = '0.3'
+__VERSION__ = '0.4'
 
 
 #from concurrent.futures import ProcessPoolExecutor
@@ -41,7 +41,7 @@ logger.setLevel(logging.DEBUG)
 fmt = logging.Formatter('%(asctime)s - %(threadName)-11s - %(levelname)s - %(message)s')
 
 sh1 = logging.StreamHandler()
-sh1.setLevel(logging.INFO)
+sh1.setLevel(logging.DEBUG)
 sh1.setFormatter(fmt)
 logger.addHandler(sh1)
 
@@ -58,24 +58,24 @@ logger.addHandler(fh2)
 
 def main(args):
 	logger.info('Starting STB v%s ' % __VERSION__)
-
+	initDB()
 	if args.purge:
 		deleteDB()
 	if args.init:
 		initSTB()
-	if args.rssd or args.statsd or args.wikid:
-		watch_list = getWatchList()
+	if args.stats:
+		stats()
+
+	if args.rss or  args.wiki:
+		#watch_list = getWatchList()
 		q = asyncio.Queue()
 
 		ES_thread = Upload(logger, server, 5, q)
 		Threads = [ES_thread]
-		if args.statsd:
-			Stats_thread = Stats(logger, index_name[2], q, watch_list)
-			Threads.append(Stats_thread) 
-		if args.wikid:
+		if args.wiki:
 			Wiki_thread = Wiki(logger, index_name[3], q, watch_list)
 			Threads.append(Wiki_thread)
-		if args.rssd:
+		if args.rss:
 			RSS_thread = RSS(logger, index_name[4], q, watch_list)
 			Threads.append(RSS_thread)
 
@@ -127,8 +127,6 @@ def main(args):
 
 
 def initSTB():
-	initDB()
-
 	q = asyncio.Queue()
 
 	stream = urlopen(NASDAQ_url)
@@ -140,17 +138,21 @@ def initSTB():
 	del NYSE[0]
 
 	Companies = list(NASDAQ + NYSE)
-	Companies = list(divide_chunks(Companies, Threads_count))
+	#Companies = list(divide_chunks(Companies, Threads_count))
 	
 	loop = asyncio.get_event_loop()
+
 	threads = []
-	futures = []
-	for i in range(0, Threads_count):
-		thread = Basics(logger, index_names[0], q, i, Companies[i])
-		futures.append(loop.run_in_executor(None, thread.run, loop))
-		threads.append(thread)
+	thread = Basics(logger, index, q, 1, Companies)
+	threads.append(thread)
+
+
 	ES_thread = Upload(logger, q, server, bulk_size, threads)
-	futures.append(loop.run_in_executor(None, ES_thread.run, loop))
+
+	asyncio.run(thread.run(), debug=True)
+	asyncio.run(ES_thread.run(), debug=True)
+
+
 
 	logger.info('Gathering Basic info on NASDAQ and NYSE companies')
 
@@ -158,24 +160,48 @@ def initSTB():
 	# broker.serve(host=proxy_host, port=proxy_port, types=proxy_types, limit=10, max_tries=3,
 	# 	prefer_connect=True, min_req_proxy=5, max_error_rate=0.5,
 	# 	max_resp_time=8, http_allowed_codes=proxy_codes, backlog=100)
-	for future in futures:
-		loop.run_until_complete(future)
+
+
 	while not ES_thread.Fin:
 		sleep(10)
 	#broker.stop()
 	loop.close()
 
+def stats():
+	tickers = getField('symbol')
+
+	q = asyncio.Queue()
+
+	loop = asyncio.new_event_loop()
+	threads = []
+	futures = []
+
+	thread = Stats(logger, index, q, tickers)
+	threads.append(thread)
+	futures.append(loop.run_in_executor(None, thread.run, loop))
+
+	ES_thread = Upload(logger, q, server, bulk_size, threads)
+	futures.append(loop.run_in_executor(None, ES_thread.run, loop))
+
+	logger.info('Gathering Indicators on NASDAQ and NYSE companies')
+
+	for future in futures:
+		loop.run_until_complete(future)
+	while not ES_thread.Fin:
+		sleep(10)
+	loop.close()
+
 
 def initDB():
-	logger.info('Initializing indexs %s at %s' % (index_names, server))
+	logger.info('Initializing index %s at %s' % (index, server))
 	es = Elasticsearch([server])
-	[es.indices.create(index=index, ignore=400, body=es_mappings[0]) for index in index_names]
+	es.indices.create(index=index, ignore=400, body=es_mapping)
 
 
 def deleteDB():
-	logger.info('Purging indexes %s at %s' % (index_names, server))
+	logger.info('Purging index %s at %s' % (index, server))
 	es = Elasticsearch([server])
-	[es.indices.delete(index=index, ignore=404) for index in index_names]
+	es.indices.delete(index=index, ignore=404)
 
 
 def divide_chunks(seq, num): 
@@ -188,16 +214,25 @@ def divide_chunks(seq, num):
     return out
 
 
+def getField(field):
+	es = Elasticsearch([server])
+	res = es.search(index=index, body={"query": {"match_all": {}}})
+	fields = []
+	for hit in res['hits']['hits']:
+		fields.append(hit['_source'][field])
+
+
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Data Collector for STB')
 	parser.add_argument('--purge', dest='purge', action='store_true')
 	parser.set_defaults(purge=False)
 	parser.add_argument('--init', dest='init', action='store_true')
 	parser.set_defaults(init=False)
-	parser.add_argument('--rssd', dest='rssd', action='store_true')
+	parser.add_argument('--rss', dest='rss', action='store_true')
 	parser.set_defaults(rssd=False)
-	parser.add_argument('--statsd', dest='statsd', action='store_true')
+	parser.add_argument('--stats', dest='stats', action='store_true')
 	parser.set_defaults(statsd=False)
-	parser.add_argument('--wikid', dest='wikid', action='store_true')
+	parser.add_argument('--wiki', dest='wiki', action='store_true')
 	parser.set_defaults(wikid=False)
 	main(parser.parse_args())
