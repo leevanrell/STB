@@ -6,5 +6,5 @@
 **.yaml
 **/bin
 **/include
-**/lib
+
 data/conf/config.py
